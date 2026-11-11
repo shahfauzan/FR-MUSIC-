@@ -1,21 +1,21 @@
-name: Build FR Music APK
+name: Build & Release FR Music
 
 on:
   workflow_dispatch:
   push:
-    branches:
-      - main
+    tags:
+      - "v*"
 
 permissions:
   contents: write
 
 jobs:
   build:
-    name: Build APK
+    name: Build Android APK
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Set up JDK 17
@@ -27,9 +27,24 @@ jobs:
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          cmdline-tools-version: "12266719"
+
+      - name: Accept Android SDK licenses
+        run: |
+          yes | sdkmanager --licenses > /dev/null || true
+
+      - name: Install required Android SDK packages
+        run: |
+          sdkmanager "platform-tools"
+          sdkmanager "platforms;android-36"
+          sdkmanager "build-tools;36.0.0"
 
       - name: Make Gradle executable
         run: chmod +x ./gradlew
+
+      - name: Clean project
+        run: ./gradlew clean
 
       - name: Build Debug APK
         run: ./gradlew assembleDebug --stacktrace
@@ -39,16 +54,16 @@ jobs:
           mkdir -p release
           cp app/build/outputs/apk/debug/*.apk release/FR-Music.apk
 
-      - name: Upload APK Artifact
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: FR-Music-APK
           path: release/FR-Music.apk
 
-      - name: Create Release
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ github.run_number }}
-          name: FR Music v${{ github.run_number }}
+          tag_name: ${{ github.ref_name }}
+          name: FR Music ${{ github.ref_name }}
           generate_release_notes: true
           files: release/FR-Music.apk
