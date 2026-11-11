@@ -26,38 +26,47 @@ jobs:
           cache: gradle
 
       - name: Configure Android SDK
+        shell: bash
         run: |
-          echo "ANDROID_HOME=${ANDROID_HOME:-$ANDROID_SDK_ROOT}" >> "$GITHUB_ENV"
           SDK_ROOT="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
 
+          echo "ANDROID_HOME=$SDK_ROOT" >> "$GITHUB_ENV"
           echo "$SDK_ROOT/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
           echo "$SDK_ROOT/platform-tools" >> "$GITHUB_PATH"
 
-      - name: Accept Android SDK licenses
+          echo "Android SDK: $SDK_ROOT"
+
+      - name: Find SDK Manager
+        shell: bash
         run: |
           SDK_ROOT="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
-          SDKMANAGER=$(find "$SDK_ROOT/cmdline-tools" -name sdkmanager -type f | head -n 1)
 
-          echo "Using sdkmanager: $SDKMANAGER"
+          SDKMANAGER=$(find "$SDK_ROOT/cmdline-tools" \
+            -name sdkmanager \
+            -type f \
+            | sort \
+            | tail -n 1)
 
+          if [ -z "$SDKMANAGER" ]; then
+            echo "ERROR: sdkmanager not found"
+            exit 1
+          fi
+
+          echo "SDKMANAGER=$SDKMANAGER" >> "$GITHUB_ENV"
+          echo "Using: $SDKMANAGER"
+
+      - name: Accept Android SDK licenses
+        shell: bash
+        run: |
           yes | "$SDKMANAGER" --licenses > /dev/null || true
 
       - name: Install Android SDK packages
+        shell: bash
         run: |
-          SDK_ROOT="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
-          SDKMANAGER=$(find "$SDK_ROOT/cmdline-tools" -name sdkmanager -type f | head -n 1)
-
-          echo "Using sdkmanager: $SDKMANAGER"
-
-          "$SDKMANAGER" "platform-tools"
-          "$SDKMANAGER" "platforms;android-36"
-          "$SDKMANAGER" "build-tools;36.0.0"
-
-      - name: Check Android SDK
-        run: |
-          SDK_ROOT="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
-          echo "ANDROID SDK: $SDK_ROOT"
-          "$SDK_ROOT/platform-tools/adb" version || true
+          "$SDKMANAGER" --install \
+            "platform-tools" \
+            "platforms;android-36" \
+            "build-tools;36.0.0"
 
       - name: Make Gradle executable
         run: chmod +x ./gradlew
@@ -69,9 +78,17 @@ jobs:
         run: ./gradlew assembleDebug --stacktrace
 
       - name: Prepare APK
+        shell: bash
         run: |
           mkdir -p release
-          cp app/build/outputs/apk/debug/*.apk release/FR-Music.apk
+          APK=$(find app/build/outputs/apk/debug -name "*.apk" -type f | head -n 1)
+
+          if [ -z "$APK" ]; then
+            echo "ERROR: APK was not generated"
+            exit 1
+          fi
+
+          cp "$APK" release/FR-Music.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
