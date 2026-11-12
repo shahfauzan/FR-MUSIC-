@@ -29,8 +29,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
-import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -50,7 +48,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.data.remote.ProviderType
 import com.example.ui.MainViewModel
 import com.example.ui.theme.FRCharcoal
 import com.example.ui.theme.FRCyan
@@ -71,7 +68,6 @@ fun ProfileScreen(
     val userPlaylists by viewModel.userPlaylists.collectAsState()
     val recentlyPlayed by viewModel.recentlyPlayed.collectAsState()
     val userProfile by viewModel.userProfile.collectAsState()
-    val currentProviderType by viewModel.repository.currentProviderType.collectAsState()
 
     val name = userProfile?.name?.ifBlank { "Fauzan Shah" } ?: "Fauzan Shah"
     val email = userProfile?.email?.ifBlank { "shahfauzan49@gmail.com" } ?: "shahfauzan49@gmail.com"
@@ -223,115 +219,6 @@ fun ProfileScreen(
             Spacer(modifier = Modifier.height(20.dp))
         }
 
-        // Music Provider Configuration (Demo Mode vs Live Legal API)
-        item {
-            Text(
-                text = "Music Provider & Engine",
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontWeight = FontWeight.Bold,
-                    color = FRTextPrimary,
-                    fontSize = 16.sp
-                )
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Card(
-                shape = RoundedCornerShape(14.dp),
-                colors = CardDefaults.cardColors(containerColor = FRSurfaceVariant),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(14.dp)) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { viewModel.setProviderType(ProviderType.YOUTUBE_DATA_API) }
-                            .padding(vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = currentProviderType == ProviderType.YOUTUBE_DATA_API,
-                            onClick = { viewModel.setProviderType(ProviderType.YOUTUBE_DATA_API) },
-                            colors = RadioButtonDefaults.colors(selectedColor = FRCyan)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Column {
-                            Text(
-                                text = "YouTube Data API v3 (Active Key)",
-                                color = FRTextPrimary,
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 14.sp
-                            )
-                            Text(
-                                text = "Official YouTube music search, video metadata, and top music channels.",
-                                color = FRTextSecondary,
-                                fontSize = 11.5.sp
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(6.dp))
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { viewModel.setProviderType(ProviderType.LEGAL_API_PREVIEWS) }
-                            .padding(vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = currentProviderType == ProviderType.LEGAL_API_PREVIEWS,
-                            onClick = { viewModel.setProviderType(ProviderType.LEGAL_API_PREVIEWS) },
-                            colors = RadioButtonDefaults.colors(selectedColor = FRCyan)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Column {
-                            Text(
-                                text = "Authorized Legal Preview API (iTunes)",
-                                color = FRTextPrimary,
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 14.sp
-                            )
-                            Text(
-                                text = "Legal 30-sec official audio previews & high-res artwork without DRM scraping.",
-                                color = FRTextSecondary,
-                                fontSize = 11.5.sp
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(6.dp))
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { viewModel.setProviderType(ProviderType.CURATED_DEMO_OFFLINE) }
-                            .padding(vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = currentProviderType == ProviderType.CURATED_DEMO_OFFLINE,
-                            onClick = { viewModel.setProviderType(ProviderType.CURATED_DEMO_OFFLINE) },
-                            colors = RadioButtonDefaults.colors(selectedColor = FRCyan)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Column {
-                            Text(
-                                text = "Curated Demo Mode (Offline Friendly)",
-                                color = FRTextPrimary,
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 14.sp
-                            )
-                            Text(
-                                text = "Royalty-free verified streams across Hindi, English, Punjabi, and Lo-fi.",
-                                color = FRTextSecondary,
-                                fontSize = 11.5.sp
-                            )
-                        }
-                    }
-                }
-            }
-            Spacer(modifier = Modifier.height(20.dp))
-        }
 
         // Language Preferences
         item {

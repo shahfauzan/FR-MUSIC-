@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">FR Music</string>
+    <string name="widget_player_description">Control current playback and song details directly from your home screen.</string>
+    <string name="widget_shortcuts_description">Quick 1-tap shortcuts to Hindi, English, Punjabi, and Lo-fi music mixes.</string>
 </resources>

@@ -123,21 +123,6 @@ fun HomeScreen(
                     }
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Surface(
-                            color = FRSurfaceVariant,
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Text(
-                                text = if (viewModel.repository.isDemoMode) "DEMO" else "LIVE",
-                                color = FRTextSecondary,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.width(8.dp))
-
                         Box(
                             modifier = Modifier
                                 .size(36.dp)

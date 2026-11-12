@@ -27,6 +27,35 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- FR Music Now Playing Widget -->
+        <receiver
+            android:name=".widget.MusicPlayerWidgetProvider"
+            android:exported="true"
+            android:label="FR Music Player">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.example.fr_music.ACTION_PLAY_PAUSE" />
+                <action android:name="com.example.fr_music.ACTION_NEXT" />
+                <action android:name="com.example.fr_music.ACTION_WIDGET_STATE_CHANGED" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_music_player_info" />
+        </receiver>
+
+        <!-- FR Music Quick Mix Shortcuts Widget -->
+        <receiver
+            android:name=".widget.MusicShortcutsWidgetProvider"
+            android:exported="true"
+            android:label="FR Music Quick Mix">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_music_shortcuts_info" />
+        </receiver>
     </application>
 
 </manifest>

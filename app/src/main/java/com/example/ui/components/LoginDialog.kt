@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -84,16 +85,15 @@ fun LoginDialog(
             ) {
                 Box(
                     modifier = Modifier
-                        .size(52.dp)
-                        .clip(CircleShape)
-                        .background(FRSurfaceElevated),
+                        .size(54.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(FRCharcoal),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.MusicNote,
-                        contentDescription = null,
-                        tint = FRCharcoal,
-                        modifier = Modifier.size(28.dp)
+                    coil.compose.AsyncImage(
+                        model = com.example.R.drawable.fr_brand_logo,
+                        contentDescription = "FR Music Logo",
+                        modifier = Modifier.fillMaxSize()
                     )
                 }
 

@@ -75,6 +75,7 @@ class AudioPlayerManager(private val context: Context) {
                         errorMessage = null
                     )
                     startProgressTracker()
+                    notifyWidgetUpdate()
                 } catch (e: Exception) {
                     Log.e("AudioPlayer", "Error starting prepared player", e)
                 }
@@ -216,6 +217,7 @@ class AudioPlayerManager(private val context: Context) {
             mediaPlayer?.pause()
             _uiState.value = _uiState.value.copy(playbackState = PlaybackState.PAUSED)
             stopProgressTracker()
+            notifyWidgetUpdate()
         } catch (e: Exception) {
             Log.e("AudioPlayer", "Error in pause()", e)
         }
@@ -226,6 +228,7 @@ class AudioPlayerManager(private val context: Context) {
             mediaPlayer?.start()
             _uiState.value = _uiState.value.copy(playbackState = PlaybackState.PLAYING)
             startProgressTracker()
+            notifyWidgetUpdate()
         } catch (e: Exception) {
             Log.e("AudioPlayer", "Error in resume()", e)
         }
@@ -395,5 +398,26 @@ class AudioPlayerManager(private val context: Context) {
             Log.e("AudioPlayer", "Error releasing MediaPlayer", e)
         }
         mediaPlayer = null
+    }
+
+    fun notifyWidgetUpdate() {
+        try {
+            val intent = android.content.Intent("com.example.fr_music.ACTION_WIDGET_STATE_CHANGED")
+            intent.setPackage(context.packageName)
+            context.sendBroadcast(intent)
+        } catch (e: Exception) {
+            // ignore
+        }
+    }
+
+    companion object {
+        @Volatile
+        private var instance: AudioPlayerManager? = null
+
+        fun getInstance(context: Context): AudioPlayerManager {
+            return instance ?: synchronized(this) {
+                instance ?: AudioPlayerManager(context.applicationContext).also { instance = it }
+            }
+        }
     }
 }

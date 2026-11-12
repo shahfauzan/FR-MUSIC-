@@ -51,7 +51,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val database = AppDatabase.getDatabase(application)
     val repository = MusicRepository(database.musicDao())
-    val playerManager = AudioPlayerManager(application)
+    val playerManager = AudioPlayerManager.getInstance(application)
 
     val playerUiState: StateFlow<PlayerUiState> = playerManager.uiState
 
