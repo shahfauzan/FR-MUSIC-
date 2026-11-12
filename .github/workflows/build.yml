@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -63,10 +63,40 @@ jobs:
       - name: Build Debug APK
         run: ./gradlew assembleDebug --stacktrace
 
+      - name: Prepare Release Artifacts
+        run: |
+          mkdir -p release-artifacts
+          cp app/build/outputs/apk/debug/*.apk release-artifacts/FR-Music.apk
+
       - name: Upload Debug APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: FR-Music-Debug-APK
-          path: app/build/outputs/apk/debug/*.apk
+          path: release-artifacts/FR-Music.apk
           if-no-files-found: error
           retention-days: 30
+
+      - name: Publish to GitHub Releases
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          name: "FR Music v1.0 (Build ${{ github.run_number }})"
+          body: |
+            ## 🎵 FR Music - Android Application Release
+            
+            Welcome to **FR Music** - Your music. Your mood.
+            
+            ### 📦 Release Details
+            - **Build**: `${{ github.run_number }}`
+            - **Commit**: `${{ github.sha }}`
+            - **Features**: Hindi, English, Punjabi, Bollywood, and Lo-fi music streaming with persistent playback, white & gray theme, and home screen widgets.
+            
+            ### ⬇️ Download
+            Download the attached **`FR-Music.apk`** below to install directly on your Android phone.
+          files: |
+            release-artifacts/FR-Music.apk
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

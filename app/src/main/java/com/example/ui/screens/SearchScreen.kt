@@ -75,7 +75,7 @@ fun SearchScreen(
     val isPlaying = playerUiState.playbackState == PlaybackState.PLAYING
 
     var selectedFilter by remember { mutableStateOf("All") }
-    val quickFilters = listOf("All", "Hindi", "English", "Punjabi", "Bollywood", "Lo-fi", "Romantic")
+    val quickFilters = listOf("All", "New Releases", "Hindi", "English", "Punjabi", "Bollywood", "Lo-fi", "Romantic")
 
     Column(
         modifier = modifier

@@ -225,6 +225,33 @@ fun HomeScreen(
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
+            // New Releases
+            item {
+                SectionHeader(
+                    title = "New Releases",
+                    subtitle = "Fresh singles & albums out this week",
+                    actionText = "Explore",
+                    onActionClick = { viewModel.loadCategoryTracks("Trending") }
+                )
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    val newReleases = (homeState.trendingTracks.take(4) + homeState.punjabiVibes.take(2) + homeState.englishHits.take(2))
+                    items(newReleases) { track ->
+                        MusicCard(
+                            title = track.title,
+                            subtitle = track.artist,
+                            imageUrl = track.albumArtUrl,
+                            badgeText = "NEW",
+                            onClick = { viewModel.playTrack(track, newReleases) },
+                            onPlayClick = { viewModel.playTrack(track, newReleases) }
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
             // Hindi Hits
             item {
                 SectionHeader(
