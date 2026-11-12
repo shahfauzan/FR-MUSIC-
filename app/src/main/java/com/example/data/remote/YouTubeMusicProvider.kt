@@ -67,8 +67,9 @@ class YouTubeMusicProvider(
             else -> defaultLang
         }
 
-        // Use fallback royalty-free audio stream or preview stream for audio playback
-        val previewAudio = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
+        // Use varied full-length royalty-free audio streams
+        val trackIdx = (kotlin.math.abs(videoId.hashCode()) % 6) + 1
+        val previewAudio = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-$trackIdx.mp3"
 
         return Track(
             id = "yt_$videoId",
@@ -79,7 +80,7 @@ class YouTubeMusicProvider(
             albumId = "alb_yt_$videoId",
             albumArtUrl = thumbnail,
             previewUrl = previewAudio,
-            durationMs = 30000L,
+            durationMs = 240000L,
             genre = "Music Video",
             language = lang,
             releaseYear = item.snippet?.publishedAt?.take(4) ?: "2024"

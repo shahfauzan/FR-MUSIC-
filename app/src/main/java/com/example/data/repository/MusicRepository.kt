@@ -26,7 +26,7 @@ class MusicRepository(
     private val musicDao: MusicDao,
     private val providerFactory: MusicProviderFactory = MusicProviderFactory()
 ) {
-    private val _currentProviderType = MutableStateFlow(ProviderType.YOUTUBE_DATA_API)
+    private val _currentProviderType = MutableStateFlow(ProviderType.AUDIUS_FULL_STREAM)
     val currentProviderType: StateFlow<ProviderType> = _currentProviderType.asStateFlow()
 
     private val currentProvider: MusicProvider

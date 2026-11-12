@@ -274,7 +274,7 @@ fun ProfileScreen(
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "FR Music strictly adheres to authorized API usage. Song previews are legally licensed 30-second clips provided by official open endpoints, and demo tracks use verified royalty-free audio licenses. No DRM is bypassed, and no unauthorized MP3 files are stored or distributed.",
+                            text = "FR Music streams full-length tracks legally via authorized open music APIs (Audius) and verified royalty-free audio licenses. No DRM is bypassed, and no unauthorized copyrighted recordings are scraped or distributed.",
                             color = FRTextSecondary,
                             fontSize = 11.sp,
                             lineHeight = 16.sp

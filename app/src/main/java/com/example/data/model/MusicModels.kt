@@ -9,7 +9,7 @@ data class Track(
     val albumId: String = "",
     val albumArtUrl: String,
     val previewUrl: String? = null,
-    val durationMs: Long = 30000L, // 30-second legal preview standard or full track
+    val durationMs: Long = 180000L, // Full-length track duration
     val genre: String = "Pop",
     val language: String = "Hindi", // "Hindi", "English", "Punjabi"
     val releaseYear: String = "2024",

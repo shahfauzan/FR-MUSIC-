@@ -19,12 +19,16 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import java.util.concurrent.TimeUnit
 
 data class PlayerUiState(
     val currentTrack: Track? = null,
     val playbackState: PlaybackState = PlaybackState.IDLE,
     val currentPositionMs: Long = 0L,
-    val durationMs: Long = 30000L,
+    val durationMs: Long = 180000L,
     val queue: List<Track> = emptyList(),
     val currentQueueIndex: Int = -1,
     val isShuffle: Boolean = false,
@@ -37,6 +41,16 @@ class AudioPlayerManager(private val context: Context) {
     private val scope = CoroutineScope(Dispatchers.Main + Job())
     private var mediaPlayer: MediaPlayer? = null
     private var progressJob: Job? = null
+    private var streamPrepareJob: Job? = null
+
+    private val redirectClient: OkHttpClient by lazy {
+        OkHttpClient.Builder()
+            .followRedirects(true)
+            .followSslRedirects(true)
+            .connectTimeout(8, TimeUnit.SECONDS)
+            .readTimeout(8, TimeUnit.SECONDS)
+            .build()
+    }
 
     private val _uiState = MutableStateFlow(PlayerUiState())
     val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
@@ -51,6 +65,24 @@ class AudioPlayerManager(private val context: Context) {
             lang.contains("english") || genre.contains("pop") -> R.raw.fr_english_pop
             genre.contains("lo-fi") || genre.contains("chill") -> R.raw.fr_lofi_chill
             else -> R.raw.fr_hindi_melody
+        }
+    }
+
+    private suspend fun resolveDirectStreamUrl(url: String): String = withContext(Dispatchers.IO) {
+        try {
+            val request = Request.Builder()
+                .url(url)
+                .header("User-Agent", "FRMusic/1.0 (Android; Linux)")
+                .header("Range", "bytes=0-1")
+                .get()
+                .build()
+            redirectClient.newCall(request).execute().use { response ->
+                val finalUrl = response.request.url.toString()
+                if (response.isSuccessful && finalUrl.isNotBlank()) finalUrl else url
+            }
+        } catch (e: Exception) {
+            Log.w("AudioPlayer", "Redirect resolve skipped for $url: ${e.message}")
+            url
         }
     }
 
@@ -143,6 +175,7 @@ class AudioPlayerManager(private val context: Context) {
     }
 
     fun playTrack(track: Track, newQueue: List<Track>? = null) {
+        streamPrepareJob?.cancel()
         val updatedQueue = newQueue ?: if (_uiState.value.queue.none { it.id == track.id }) {
             _uiState.value.queue + track
         } else {
@@ -157,6 +190,7 @@ class AudioPlayerManager(private val context: Context) {
             currentQueueIndex = targetIndex,
             playbackState = PlaybackState.BUFFERING,
             currentPositionMs = 0L,
+            durationMs = track.durationMs.coerceAtLeast(180000L),
             errorMessage = null
         )
 
@@ -164,20 +198,24 @@ class AudioPlayerManager(private val context: Context) {
         val fallbackRes = getFallbackResource(track)
 
         if (streamUrl != null && (streamUrl.startsWith("http://") || streamUrl.startsWith("https://"))) {
-            try {
-                initMediaPlayer()
-                mediaPlayer?.apply {
-                    val headers = mapOf("User-Agent" to "FRMusic/1.0 (Android; Linux)")
-                    setDataSource(context.applicationContext, Uri.parse(streamUrl), headers)
-                    setVolume(_uiState.value.volume, _uiState.value.volume)
-                    prepareAsync()
+            streamPrepareJob = scope.launch {
+                try {
+                    val directUrl = resolveDirectStreamUrl(streamUrl)
+                    if (!isActive) return@launch
+                    initMediaPlayer()
+                    mediaPlayer?.apply {
+                        val headers = mapOf("User-Agent" to "FRMusic/1.0 (Android; Linux)")
+                        setDataSource(context.applicationContext, Uri.parse(directUrl), headers)
+                        setVolume(_uiState.value.volume, _uiState.value.volume)
+                        prepareAsync()
+                    }
+                } catch (e: Exception) {
+                    Log.w("AudioPlayer", "Network playback init failed, falling back to 3-min bundled track", e)
+                    playRawResource(fallbackRes)
                 }
-            } catch (e: Exception) {
-                Log.w("AudioPlayer", "Network playback init failed, falling back to bundled melody", e)
-                playRawResource(fallbackRes)
             }
         } else {
-            // Play verified bundled audio
+            // Play verified 3-min bundled audio
             playRawResource(fallbackRes)
         }
     }
