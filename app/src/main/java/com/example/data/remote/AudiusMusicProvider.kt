@@ -88,17 +88,35 @@ class AudiusMusicProvider(
     }
 
     override suspend fun search(query: String): SearchResults {
-        if (query.isBlank()) return SearchResults()
-        return try {
-            val response = apiService.searchTracks(query = query, limit = 25)
-            val audiusTracks = response.data.mapNotNull { mapDtoToTrack(it) }
-            val fallbackResults = demoFallback.search(query)
+        val trimmed = query.trim()
+        if (trimmed.isBlank()) return SearchResults()
 
-            val mergedTracks = if (audiusTracks.size >= 4) {
-                audiusTracks
-            } else {
-                (audiusTracks + fallbackResults.tracks).distinctBy { it.id }
+        val fallbackResults = demoFallback.search(trimmed)
+        val lower = trimmed.lowercase()
+
+        if (lower == "all" || lower == "new releases" || lower == "explore" || lower == "latest") {
+            return try {
+                val trendingRes = apiService.getTrendingTracks(limit = 15)
+                val liveTracks = trendingRes.data.mapNotNull { mapDtoToTrack(it) }
+                val merged = (fallbackResults.tracks + liveTracks)
+                    .distinctBy { "${it.title.lowercase().trim()}|${it.artist.lowercase().trim()}" }
+                SearchResults(
+                    tracks = merged,
+                    artists = fallbackResults.artists,
+                    albums = fallbackResults.albums,
+                    playlists = fallbackResults.playlists
+                )
+            } catch (_: Exception) {
+                fallbackResults
             }
+        }
+
+        return try {
+            val response = apiService.searchTracks(query = trimmed, limit = 25)
+            val audiusTracks = response.data.mapNotNull { mapDtoToTrack(it) }
+
+            val mergedTracks = (fallbackResults.tracks + audiusTracks)
+                .distinctBy { "${it.title.lowercase().trim()}|${it.artist.lowercase().trim()}" }
 
             val artists = mergedTracks.map { it.artist }.distinct().take(4).map { name ->
                 val match = mergedTracks.firstOrNull { it.artist == name }
@@ -130,12 +148,13 @@ class AudiusMusicProvider(
 
             SearchResults(
                 tracks = mergedTracks,
-                artists = (artists + fallbackResults.artists).distinctBy { it.name }.take(6),
-                albums = (albums + fallbackResults.albums).distinctBy { it.title }.take(6)
+                artists = (fallbackResults.artists + artists).distinctBy { it.name.lowercase() }.take(6),
+                albums = (fallbackResults.albums + albums).distinctBy { it.title.lowercase() }.take(6),
+                playlists = fallbackResults.playlists
             )
         } catch (e: Exception) {
             Log.w("AudiusMusicProvider", "Search failed, falling back to full-length demo catalog", e)
-            demoFallback.search(query)
+            fallbackResults
         }
     }
 

@@ -12,24 +12,28 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.automirrored.filled.VolumeDown
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -40,8 +44,6 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
-import androidx.compose.material.icons.automirrored.filled.VolumeDown
-import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -52,7 +54,6 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -61,9 +62,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -72,12 +71,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.min
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.data.model.PlaybackState
 import com.example.data.model.RepeatMode as DomainRepeatMode
 import com.example.data.model.Track
-import com.example.ui.theme.FRBackground
 import com.example.ui.theme.FRCharcoal
 import com.example.ui.theme.FRCyan
 import com.example.ui.theme.FRMagenta
@@ -85,7 +84,6 @@ import com.example.ui.theme.FRSurfaceVariant
 import com.example.ui.theme.FRTextMuted
 import com.example.ui.theme.FRTextPrimary
 import com.example.ui.theme.FRTextSecondary
-import com.example.ui.theme.FRViolet
 
 @Composable
 fun FullScreenPlayerSheet(
@@ -129,116 +127,149 @@ fun FullScreenPlayerSheet(
         return "%d:%02d".format(min, sec)
     }
 
-    Box(
+    BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(
-                        Color(0xFFFFFFFF),
-                        Color(0xFFF8F9FA),
-                        Color(0xFFF1F5F9)
-                    )
-                )
-            )
-            .statusBarsPadding()
             .testTag("full_screen_player")
     ) {
+        val isPlayingNow = playbackState == PlaybackState.PLAYING
+        val artSize = min(maxWidth * 0.78f, maxHeight * 0.36f).coerceIn(150.dp, 310.dp)
+
+        AmbientArtworkBackdrop(
+            imageUrl = track.albumArtUrl,
+            isPlaying = isPlayingNow,
+            modifier = Modifier.fillMaxSize(),
+            intensity = 0.34f
+        )
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .statusBarsPadding()
+                .navigationBarsPadding()
                 .padding(horizontal = 24.dp)
                 .verticalScroll(scrollState),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Header
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            Column(
+                modifier = Modifier.widthIn(max = 540.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                IconButton(
-                    onClick = onDismiss,
-                    modifier = Modifier.testTag("collapse_player_button")
+                // Header
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 10.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.KeyboardArrowDown,
-                        contentDescription = "Collapse",
-                        tint = FRTextPrimary,
-                        modifier = Modifier.size(32.dp)
-                    )
-                }
-
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = "PLAYING FROM",
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            color = FRTextMuted,
-                            fontSize = 11.sp,
-                            letterSpacing = 1.2.sp
+                    IconButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.testTag("collapse_player_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.KeyboardArrowDown,
+                            contentDescription = "Collapse",
+                            tint = FRTextPrimary,
+                            modifier = Modifier.size(32.dp)
                         )
-                    )
-                    Text(
-                        text = track.album.ifEmpty { "FR Music Charts" },
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            color = FRTextPrimary,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 12.5.sp
-                        ),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-
-                IconButton(
-                    onClick = {
-                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                            type = "text/plain"
-                            putExtra(
-                                Intent.EXTRA_TEXT,
-                                "Listening to ${track.title} by ${track.artist} on FR Music! 🎵 #FRMusic"
-                            )
-                        }
-                        context.startActivity(Intent.createChooser(shareIntent, "Share Track"))
                     }
+
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.weight(1f).padding(horizontal = 8.dp)
+                    ) {
+                        Text(
+                            text = "PLAYING FROM",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = FRTextMuted,
+                                fontSize = 10.5.sp,
+                                letterSpacing = 1.2.sp
+                            )
+                        )
+                        Text(
+                            text = track.album.ifEmpty { "FR Music Charts" },
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                color = FRTextPrimary,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.5.sp
+                            ),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+
+                    IconButton(
+                        onClick = {
+                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(
+                                    Intent.EXTRA_TEXT,
+                                    "Listening to ${track.title} by ${track.artist} on FR Music! #FRMusic"
+                                )
+                            }
+                            context.startActivity(Intent.createChooser(shareIntent, "Share Track"))
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Share,
+                            contentDescription = "Share",
+                            tint = FRTextPrimary,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                }
+
+                // Subtle Background Play Status Pill
+                Surface(
+                    color = Color(0xCCFFFFFF),
+                    shape = RoundedCornerShape(16.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Share,
-                        contentDescription = "Share",
-                        tint = FRTextPrimary,
-                        modifier = Modifier.size(22.dp)
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Headphones,
+                            contentDescription = null,
+                            tint = FRCharcoal,
+                            modifier = Modifier.size(13.dp)
+                        )
+                        Spacer(modifier = Modifier.width(5.dp))
+                        Text(
+                            text = if (isPlayingNow) "Background Play Active" else "Background Play Ready",
+                            color = FRCharcoal,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // Adaptive Album Artwork
+                Box(
+                    modifier = Modifier
+                        .size(artSize)
+                        .shadow(
+                            elevation = 18.dp,
+                            shape = RoundedCornerShape(22.dp),
+                            ambientColor = Color(0x28000000),
+                            spotColor = Color(0x38000000)
+                        )
+                        .clip(RoundedCornerShape(22.dp))
+                        .background(Color(0xFFE2E8F0)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    AsyncImage(
+                        model = track.albumArtUrl,
+                        contentDescription = track.title,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
                     )
                 }
-            }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Large Album Artwork with Ambient Glow
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth(0.85f)
-                    .aspectRatio(1f)
-                    .shadow(
-                        elevation = 16.dp,
-                        shape = RoundedCornerShape(20.dp),
-                        ambientColor = Color(0x20000000),
-                        spotColor = Color(0x30000000)
-                    )
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(Color(0xFFE2E8F0)),
-                contentAlignment = Alignment.Center
-            ) {
-                AsyncImage(
-                    model = track.albumArtUrl,
-                    contentDescription = track.title,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
-
-            Spacer(modifier = Modifier.height(28.dp))
+                Spacer(modifier = Modifier.height(22.dp))
 
             // Error Message Banner if any
             if (errorMessage != null) {
@@ -481,7 +512,7 @@ fun FullScreenPlayerSheet(
                 horizontalArrangement = Arrangement.Center
             ) {
                 Surface(
-                    color = FRSurfaceVariant,
+                    color = Color(0xCCFFFFFF),
                     shape = RoundedCornerShape(20.dp),
                     modifier = Modifier.clickable(onClick = onOpenQueue)
                 ) {
@@ -504,6 +535,7 @@ fun FullScreenPlayerSheet(
                         )
                     }
                 }
+            }
             }
         }
     }

@@ -433,39 +433,80 @@ class DemoMusicProvider : MusicProvider {
         )
     )
 
+    val catalogTracks: List<Track> get() = allTracks
+    val catalogArtists: List<Artist> get() = allArtists
+    val catalogAlbums: List<Album> get() = allAlbums
+    val catalogPlaylists: List<Playlist> get() = allPlaylists
+
+    private fun normalize(text: String): String =
+        text.lowercase().replace(Regex("[^a-z0-9\\s]"), " ").replace(Regex("\\s+"), " ").trim()
+
     override suspend fun search(query: String): SearchResults {
-        val q = query.trim().lowercase()
-        if (q.isEmpty()) return SearchResults()
+        val normalizedQuery = normalize(query)
+        if (normalizedQuery.isEmpty()) return SearchResults()
 
-        val matchedTracks = allTracks.filter {
-            it.title.lowercase().contains(q) ||
-            it.artist.lowercase().contains(q) ||
-            it.album.lowercase().contains(q) ||
-            it.genre.lowercase().contains(q) ||
-            it.language.lowercase().contains(q)
+        if (normalizedQuery == "all" || normalizedQuery == "explore") {
+            return SearchResults(
+                tracks = allTracks,
+                artists = allArtists,
+                albums = allAlbums,
+                playlists = allPlaylists
+            )
         }
 
-        val matchedArtists = allArtists.filter {
-            it.name.lowercase().contains(q) || it.genre.lowercase().contains(q)
+        if (normalizedQuery == "new releases" || normalizedQuery == "new" || normalizedQuery == "latest") {
+            val newest = allTracks.sortedByDescending { it.releaseYear.toIntOrNull() ?: 0 }
+            return SearchResults(
+                tracks = newest,
+                artists = allArtists.take(4),
+                albums = allAlbums
+            )
         }
 
-        val matchedAlbums = allAlbums.filter {
-            it.title.lowercase().contains(q) || it.artist.lowercase().contains(q)
+        val tokens = normalizedQuery.split(" ").filter { it.isNotBlank() }
+
+        val scoredTracks = allTracks.mapNotNull { track ->
+            val searchable = normalize(
+                "${track.title} ${track.artist} ${track.album} ${track.genre} ${track.language} ${track.releaseYear}"
+            )
+            val titleNorm = normalize(track.title)
+            val artistNorm = normalize(track.artist)
+            val allTokensMatch = tokens.all { searchable.contains(it) }
+            val anyTokenMatch = tokens.any { searchable.contains(it) }
+
+            when {
+                titleNorm == normalizedQuery || artistNorm == normalizedQuery -> track to 100
+                titleNorm.startsWith(normalizedQuery) || artistNorm.startsWith(normalizedQuery) -> track to 80
+                allTokensMatch -> track to 60
+                tokens.size > 1 && anyTokenMatch -> track to 30
+                else -> null
+            }
+        }.sortedByDescending { it.second }.map { it.first }
+
+        val matchedArtists = allArtists.filter { artist ->
+            val searchable = normalize("${artist.name} ${artist.genre} ${artist.language}")
+            tokens.all { searchable.contains(it) } || tokens.any { normalize(artist.name).contains(it) }
         }
 
-        val matchedPlaylists = allPlaylists.filter {
-            it.title.lowercase().contains(q) || it.description.lowercase().contains(q)
+        val matchedAlbums = allAlbums.filter { album ->
+            val searchable = normalize("${album.title} ${album.artist} ${album.genre} ${album.language}")
+            tokens.all { searchable.contains(it) } || tokens.any { normalize(album.title).contains(it) }
+        }
+
+        val matchedPlaylists = allPlaylists.filter { pl ->
+            val searchable = normalize("${pl.title} ${pl.description} ${pl.language}")
+            tokens.all { searchable.contains(it) } || tokens.any { normalize(pl.title).contains(it) }
         }
 
         return SearchResults(
-            tracks = matchedTracks,
+            tracks = scoredTracks,
             artists = matchedArtists,
             albums = matchedAlbums,
             playlists = matchedPlaylists
         )
     }
 
-    override suspend fun getTrending(): List<Track> = allTracks.shuffled().take(8)
+    override suspend fun getTrending(): List<Track> = allTracks.sortedByDescending { it.playsCount }.take(8)
 
     override suspend fun getHindiHits(): List<Track> =
         allTracks.filter { it.language.equals("Hindi", ignoreCase = true) }

@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -89,7 +90,7 @@ fun ArtistDetailScreen(
         modifier = modifier
             .fillMaxSize()
             .testTag("artist_detail_screen"),
-        contentPadding = PaddingValues(bottom = 120.dp)
+        contentPadding = PaddingValues(bottom = 24.dp)
     ) {
         // Hero Banner
         item {
@@ -123,10 +124,11 @@ fun ArtistDetailScreen(
                 IconButton(
                     onClick = { viewModel.navigateBack() },
                     modifier = Modifier
+                        .statusBarsPadding()
                         .padding(16.dp)
-                        .size(40.dp)
+                        .size(48.dp)
                         .clip(CircleShape)
-                        .background(Color.Black.copy(alpha = 0.5f))
+                        .background(Color.Black.copy(alpha = 0.55f))
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -146,7 +148,7 @@ fun ArtistDetailScreen(
                     ) {
                         Text(
                             text = "VERIFIED ARTIST",
-                            color = Color.Black,
+                            color = Color.White,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
@@ -311,8 +313,9 @@ fun AlbumDetailScreen(
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
+            .statusBarsPadding()
             .testTag("album_detail_screen"),
-        contentPadding = PaddingValues(bottom = 120.dp)
+        contentPadding = PaddingValues(bottom = 24.dp)
     ) {
         item {
             Column(
@@ -456,8 +459,9 @@ fun PlaylistDetailScreen(
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
+            .statusBarsPadding()
             .testTag("playlist_detail_screen"),
-        contentPadding = PaddingValues(bottom = 120.dp)
+        contentPadding = PaddingValues(bottom = 24.dp)
     ) {
         item {
             Column(
@@ -598,8 +602,9 @@ fun CategoryDetailScreen(
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
+            .statusBarsPadding()
             .testTag("category_detail_screen"),
-        contentPadding = PaddingValues(bottom = 120.dp)
+        contentPadding = PaddingValues(bottom = 24.dp)
     ) {
         item {
             Row(

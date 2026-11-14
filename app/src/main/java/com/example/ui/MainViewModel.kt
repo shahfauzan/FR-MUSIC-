@@ -12,10 +12,14 @@ import com.example.data.model.Playlist
 import com.example.data.model.SearchResults
 import com.example.data.model.Track
 import com.example.data.remote.ProviderType
+import com.example.data.remote.youtube.ResolvedYouTubeLink
+import com.example.data.remote.youtube.YouTubeLinkResolver
 import com.example.data.repository.MusicRepository
 import com.example.player.AudioPlayerManager
 import com.example.player.PlayerUiState
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -88,6 +92,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val homeState: StateFlow<HomeDataState> = _homeState.asStateFlow()
 
     // Search State
+    private var searchJob: Job? = null
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
@@ -96,6 +101,33 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _isSearching = MutableStateFlow(false)
     val isSearching: StateFlow<Boolean> = _isSearching.asStateFlow()
+
+    private val _selectedSearchFilter = MutableStateFlow("All")
+    val selectedSearchFilter: StateFlow<String> = _selectedSearchFilter.asStateFlow()
+
+    private val _searchSuggestions = MutableStateFlow<List<String>>(emptyList())
+    val searchSuggestions: StateFlow<List<String>> = _searchSuggestions.asStateFlow()
+
+    // YouTube Link Paste & In-App Player State
+    private val _detectedYouTubeUrl = MutableStateFlow<String?>(null)
+    val detectedYouTubeUrl: StateFlow<String?> = _detectedYouTubeUrl.asStateFlow()
+
+    private val _activeYouTubeLink = MutableStateFlow<ResolvedYouTubeLink?>(null)
+    val activeYouTubeLink: StateFlow<ResolvedYouTubeLink?> = _activeYouTubeLink.asStateFlow()
+
+    private val _isResolvingYouTube = MutableStateFlow(false)
+    val isResolvingYouTube: StateFlow<Boolean> = _isResolvingYouTube.asStateFlow()
+
+    private val _youTubeError = MutableStateFlow<String?>(null)
+    val youTubeError: StateFlow<String?> = _youTubeError.asStateFlow()
+
+    private val _showYouTubeDialog = MutableStateFlow(false)
+    val showYouTubeDialog: StateFlow<Boolean> = _showYouTubeDialog.asStateFlow()
+
+    fun setShowYouTubeDialog(show: Boolean) {
+        _showYouTubeDialog.value = show
+        if (!show) _youTubeError.value = null
+    }
 
     // Room Persistent Flows
     val favoriteTracks: StateFlow<List<Track>> = repository.getAllFavorites()
@@ -211,25 +243,110 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun onSearchQueryChanged(query: String) {
+    fun onSearchQueryChanged(query: String, immediate: Boolean = false) {
         _searchQuery.value = query
+        searchJob?.cancel()
+
+        if (YouTubeLinkResolver.isYouTubeUrl(query)) {
+            _detectedYouTubeUrl.value = query.trim()
+        } else {
+            _detectedYouTubeUrl.value = null
+        }
+
+        _searchSuggestions.value = repository.getQuickSuggestions(query)
+
         if (query.isBlank()) {
+            _selectedSearchFilter.value = "All"
             _searchResults.value = SearchResults()
             _isSearching.value = false
             return
         }
 
-        viewModelScope.launch(Dispatchers.IO) {
-            _isSearching.value = true
+        searchJob = viewModelScope.launch(Dispatchers.IO) {
+            // 1. Instant local index results so user sees zero lag
+            val localInstant = repository.searchLocalInstant(query)
+            if (localInstant.tracks.isNotEmpty() || localInstant.artists.isNotEmpty()) {
+                _searchResults.value = localInstant
+            }
+
+            if (!immediate) delay(240)
+            _isSearching.value = localInstant.tracks.isEmpty()
             try {
                 val results = repository.search(query)
                 _searchResults.value = results
-            } catch (e: Exception) {
-                _searchResults.value = SearchResults()
+            } catch (_: Exception) {
+                if (_searchResults.value.tracks.isEmpty()) {
+                    _searchResults.value = localInstant
+                }
             } finally {
                 _isSearching.value = false
             }
         }
+    }
+
+    fun selectSearchFilter(filter: String) {
+        _selectedSearchFilter.value = filter
+        if (filter == "All") {
+            _searchQuery.value = ""
+            searchJob?.cancel()
+            searchJob = viewModelScope.launch(Dispatchers.IO) {
+                _isSearching.value = true
+                try {
+                    _searchResults.value = repository.search("All")
+                } finally {
+                    _isSearching.value = false
+                }
+            }
+        } else {
+            onSearchQueryChanged(filter, immediate = true)
+        }
+    }
+
+    fun openYouTubeLink(url: String) {
+        val trimmed = url.trim()
+        if (!YouTubeLinkResolver.isYouTubeUrl(trimmed)) {
+            _youTubeError.value = "Please paste a valid YouTube or YouTube Music link (youtube.com or youtu.be)."
+            return
+        }
+        _youTubeError.value = null
+        viewModelScope.launch(Dispatchers.IO) {
+            _isResolvingYouTube.value = true
+            try {
+                val resolved = repository.resolveYouTubeLink(trimmed)
+                if (resolved != null) {
+                    // Pause background MediaPlayer so WebView audio doesn't overlap
+                    if (playerUiState.value.playbackState == com.example.data.model.PlaybackState.PLAYING) {
+                        playerManager.pause()
+                    }
+                    _showYouTubeDialog.value = false
+                    _activeYouTubeLink.value = resolved
+                } else {
+                    _youTubeError.value = "Could not open that YouTube link."
+                }
+            } finally {
+                _isResolvingYouTube.value = false
+            }
+        }
+    }
+
+    fun dismissYouTubePlayer() {
+        _activeYouTubeLink.value = null
+        _youTubeError.value = null
+    }
+
+    fun playYouTubeMatchInBackground(link: ResolvedYouTubeLink) {
+        val trackToPlay = link.matchedAudioTrack ?: Track(
+            id = "yt_bg_${link.videoId}",
+            title = link.title,
+            artist = link.artist,
+            album = "YouTube Mix Match",
+            albumArtUrl = link.thumbnailUrl,
+            durationMs = 180000L,
+            genre = "Music",
+            language = "Hindi"
+        )
+        _activeYouTubeLink.value = null
+        playTrack(trackToPlay, listOf(trackToPlay) + _homeState.value.trendingTracks.take(6))
     }
 
     fun playTrack(track: Track, queue: List<Track>? = null) {
@@ -324,6 +441,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     override fun onCleared() {
         super.onCleared()
-        playerManager.releasePlayer()
+        // Do NOT release AudioPlayerManager here so background playback persists across activity lifecycle
     }
 }

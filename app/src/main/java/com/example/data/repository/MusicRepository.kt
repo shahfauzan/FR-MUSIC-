@@ -12,9 +12,12 @@ import com.example.data.model.Artist
 import com.example.data.model.Playlist
 import com.example.data.model.SearchResults
 import com.example.data.model.Track
+import com.example.data.remote.DemoMusicProvider
 import com.example.data.remote.MusicProvider
 import com.example.data.remote.MusicProviderFactory
 import com.example.data.remote.ProviderType
+import com.example.data.remote.youtube.ResolvedYouTubeLink
+import com.example.data.remote.youtube.YouTubeLinkResolver
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -26,6 +29,7 @@ class MusicRepository(
     private val musicDao: MusicDao,
     private val providerFactory: MusicProviderFactory = MusicProviderFactory()
 ) {
+    private val localIndex = DemoMusicProvider()
     private val _currentProviderType = MutableStateFlow(ProviderType.AUDIUS_FULL_STREAM)
     val currentProviderType: StateFlow<ProviderType> = _currentProviderType.asStateFlow()
 
@@ -50,10 +54,34 @@ class MusicRepository(
     suspend fun getPunjabiVibes(): List<Track> = currentProvider.getPunjabiVibes()
     suspend fun getRecommendations(seedGenre: String? = null): List<Track> = currentProvider.getRecommendations(seedGenre)
     suspend fun search(query: String): SearchResults = currentProvider.search(query)
+    suspend fun searchLocalInstant(query: String): SearchResults = localIndex.search(query)
     suspend fun getArtist(id: String): Artist? = currentProvider.getArtist(id)
     suspend fun getAlbum(id: String): Album? = currentProvider.getAlbum(id)
     suspend fun getPlaylist(id: String): Playlist? = currentProvider.getPlaylist(id)
     suspend fun getTracksByGenre(genre: String): List<Track> = currentProvider.getTracksByGenre(genre)
+
+    fun getQuickSuggestions(prefix: String): List<String> {
+        val q = prefix.trim().lowercase()
+        val pool = (localIndex.catalogArtists.map { it.name } +
+            localIndex.catalogTracks.map { it.title } +
+            listOf("Hindi Hits", "Punjabi Vibes", "English Pop", "Lo-fi Chill", "Bollywood Romantic"))
+            .distinct()
+        return if (q.isBlank()) pool.take(8)
+        else pool.filter { it.lowercase().contains(q) }.take(6)
+    }
+
+    suspend fun resolveYouTubeLink(url: String): ResolvedYouTubeLink? {
+        val resolved = YouTubeLinkResolver.resolve(url) ?: return null
+        val matchQuery = "${resolved.title} ${resolved.artist}".trim()
+        val matched = try {
+            search(matchQuery).tracks.firstOrNull()
+                ?: search(resolved.title).tracks.firstOrNull()
+                ?: localIndex.getTrending().firstOrNull()
+        } catch (_: Exception) {
+            localIndex.getTrending().firstOrNull()
+        }
+        return resolved.copy(matchedAudioTrack = matched)
+    }
 
     // Favorites
     fun getAllFavorites(): Flow<List<Track>> {

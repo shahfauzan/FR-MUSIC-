@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
@@ -81,6 +82,7 @@ fun ProfileScreen(
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
+            .statusBarsPadding()
             .testTag("profile_screen"),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp)
     ) {
@@ -290,7 +292,7 @@ fun ProfileScreen(
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )
-            Spacer(modifier = Modifier.height(120.dp))
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }

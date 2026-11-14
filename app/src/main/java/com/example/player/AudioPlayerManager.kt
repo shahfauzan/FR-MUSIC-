@@ -70,13 +70,24 @@ class AudioPlayerManager(private val context: Context) {
 
     private suspend fun resolveDirectStreamUrl(url: String): String = withContext(Dispatchers.IO) {
         try {
-            val request = Request.Builder()
+            val headReq = Request.Builder()
                 .url(url)
                 .header("User-Agent", "FRMusic/1.0 (Android; Linux)")
-                .header("Range", "bytes=0-1")
+                .head()
+                .build()
+            redirectClient.newCall(headReq).execute().use { response ->
+                val finalUrl = response.request.url.toString()
+                if (response.isSuccessful && finalUrl.isNotBlank()) {
+                    return@withContext finalUrl
+                }
+            }
+
+            val getReq = Request.Builder()
+                .url(url)
+                .header("User-Agent", "FRMusic/1.0 (Android; Linux)")
                 .get()
                 .build()
-            redirectClient.newCall(request).execute().use { response ->
+            redirectClient.newCall(getReq).execute().use { response ->
                 val finalUrl = response.request.url.toString()
                 if (response.isSuccessful && finalUrl.isNotBlank()) finalUrl else url
             }
@@ -84,6 +95,11 @@ class AudioPlayerManager(private val context: Context) {
             Log.w("AudioPlayer", "Redirect resolve skipped for $url: ${e.message}")
             url
         }
+    }
+
+    private fun syncServiceAndWidget() {
+        notifyWidgetUpdate()
+        MusicPlaybackService.syncService(context, _uiState.value)
     }
 
     private fun initMediaPlayer() {
@@ -107,7 +123,7 @@ class AudioPlayerManager(private val context: Context) {
                         errorMessage = null
                     )
                     startProgressTracker()
-                    notifyWidgetUpdate()
+                    syncServiceAndWidget()
                 } catch (e: Exception) {
                     Log.e("AudioPlayer", "Error starting prepared player", e)
                 }
@@ -126,6 +142,7 @@ class AudioPlayerManager(private val context: Context) {
                         errorMessage = "Playback error. Retrying with cached track."
                     )
                     stopProgressTracker()
+                    syncServiceAndWidget()
                 }
                 true
             }
@@ -145,6 +162,7 @@ class AudioPlayerManager(private val context: Context) {
         } catch (e: Exception) {
             Log.e("AudioPlayer", "Error preparing raw audio resource", e)
             _uiState.value = _uiState.value.copy(playbackState = PlaybackState.ERROR)
+            syncServiceAndWidget()
         }
     }
 
@@ -193,6 +211,7 @@ class AudioPlayerManager(private val context: Context) {
             durationMs = track.durationMs.coerceAtLeast(180000L),
             errorMessage = null
         )
+        syncServiceAndWidget()
 
         val streamUrl = track.previewUrl
         val fallbackRes = getFallbackResource(track)
@@ -222,7 +241,11 @@ class AudioPlayerManager(private val context: Context) {
 
     fun playPause() {
         val current = _uiState.value.playbackState
-        val player = mediaPlayer ?: return
+        val player = mediaPlayer
+        if (player == null) {
+            _uiState.value.currentTrack?.let { playTrack(it) }
+            return
+        }
 
         when (current) {
             PlaybackState.PLAYING -> {
@@ -230,6 +253,7 @@ class AudioPlayerManager(private val context: Context) {
                     player.pause()
                     _uiState.value = _uiState.value.copy(playbackState = PlaybackState.PAUSED)
                     stopProgressTracker()
+                    syncServiceAndWidget()
                 } catch (e: Exception) {
                     Log.e("AudioPlayer", "Error pausing", e)
                 }
@@ -239,6 +263,7 @@ class AudioPlayerManager(private val context: Context) {
                     player.start()
                     _uiState.value = _uiState.value.copy(playbackState = PlaybackState.PLAYING)
                     startProgressTracker()
+                    syncServiceAndWidget()
                 } catch (e: Exception) {
                     Log.e("AudioPlayer", "Error resuming", e)
                 }
@@ -255,7 +280,7 @@ class AudioPlayerManager(private val context: Context) {
             mediaPlayer?.pause()
             _uiState.value = _uiState.value.copy(playbackState = PlaybackState.PAUSED)
             stopProgressTracker()
-            notifyWidgetUpdate()
+            syncServiceAndWidget()
         } catch (e: Exception) {
             Log.e("AudioPlayer", "Error in pause()", e)
         }
@@ -266,7 +291,7 @@ class AudioPlayerManager(private val context: Context) {
             mediaPlayer?.start()
             _uiState.value = _uiState.value.copy(playbackState = PlaybackState.PLAYING)
             startProgressTracker()
-            notifyWidgetUpdate()
+            syncServiceAndWidget()
         } catch (e: Exception) {
             Log.e("AudioPlayer", "Error in resume()", e)
         }
@@ -290,6 +315,7 @@ class AudioPlayerManager(private val context: Context) {
             stopProgressTracker()
             mediaPlayer?.stop()
             _uiState.value = state.copy(playbackState = PlaybackState.IDLE, currentPositionMs = 0L)
+            syncServiceAndWidget()
         }
     }
 

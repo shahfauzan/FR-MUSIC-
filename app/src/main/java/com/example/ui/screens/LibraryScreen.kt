@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -81,6 +82,7 @@ fun LibraryScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
+            .statusBarsPadding()
             .testTag("library_screen")
     ) {
         // Header
@@ -232,7 +234,7 @@ fun LibraryScreen(
                 } else {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(bottom = 120.dp, top = 8.dp)
+                        contentPadding = PaddingValues(bottom = 24.dp, top = 8.dp)
                     ) {
                         items(favoriteTracks) { track ->
                             val isTrackCurrent = currentTrack?.id == track.id
@@ -266,7 +268,7 @@ fun LibraryScreen(
                 } else {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(bottom = 120.dp, top = 8.dp)
+                        contentPadding = PaddingValues(bottom = 24.dp, top = 8.dp)
                     ) {
                         items(recentlyPlayed) { track ->
                             val isTrackCurrent = currentTrack?.id == track.id
