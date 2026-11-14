@@ -14,7 +14,8 @@ data class Track(
     val language: String = "Hindi", // "Hindi", "English", "Punjabi"
     val releaseYear: String = "2024",
     val playsCount: Long = 1250000L,
-    val isFavorite: Boolean = false
+    val isFavorite: Boolean = false,
+    val youtubeVideoId: String? = null
 ) {
     val durationFormatted: String
         get() {

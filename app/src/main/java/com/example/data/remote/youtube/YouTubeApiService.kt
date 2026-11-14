@@ -9,8 +9,8 @@ interface YouTubeApiService {
         @Query("part") part: String = "snippet",
         @Query("q") query: String,
         @Query("type") type: String = "video",
-        @Query("videoCategoryId") videoCategoryId: String = "10", // 10 = Music Category
-        @Query("maxResults") maxResults: Int = 15,
+        @Query("videoEmbeddable") videoEmbeddable: String = "true",
+        @Query("maxResults") maxResults: Int = 20,
         @Query("key") apiKey: String
     ): YouTubeSearchResponse
 }

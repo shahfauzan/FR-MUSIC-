@@ -73,4 +73,18 @@ class ExampleUnitTest {
         assertEquals("Kesariya", title)
         assertEquals("Arijit Singh", artist)
     }
+
+    @Test
+    fun track_youtubeVideoId_defaultsNullAndPreservesId() {
+        val regular = Track(id = "1", title = "Song", artist = "Artist", albumArtUrl = "")
+        val ytTrack = Track(
+            id = "yt_abc123",
+            title = "Kesariya",
+            artist = "Arijit Singh",
+            albumArtUrl = "",
+            youtubeVideoId = "abc123"
+        )
+        assertNull(regular.youtubeVideoId)
+        assertEquals("abc123", ytTrack.youtubeVideoId)
+    }
 }

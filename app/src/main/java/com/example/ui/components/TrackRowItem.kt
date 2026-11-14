@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.data.model.Track
+import com.example.ui.theme.FRCharcoal
 import com.example.ui.theme.FRCyan
 import com.example.ui.theme.FRMagenta
 import com.example.ui.theme.FRSurfaceVariant
@@ -152,7 +153,17 @@ fun TrackRowItem(
                     modifier = Modifier.weight(1f, fill = false)
                 )
 
-                if (track.language.isNotBlank()) {
+                if (track.youtubeVideoId != null) {
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "• YouTube",
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            color = FRCharcoal,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp
+                        )
+                    )
+                } else if (track.language.isNotBlank()) {
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = "• ${track.language}",

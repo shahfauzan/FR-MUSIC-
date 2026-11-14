@@ -30,7 +30,7 @@ class MusicRepository(
     private val providerFactory: MusicProviderFactory = MusicProviderFactory()
 ) {
     private val localIndex = DemoMusicProvider()
-    private val _currentProviderType = MutableStateFlow(ProviderType.AUDIUS_FULL_STREAM)
+    private val _currentProviderType = MutableStateFlow(ProviderType.YOUTUBE_DATA_API)
     val currentProviderType: StateFlow<ProviderType> = _currentProviderType.asStateFlow()
 
     private val currentProvider: MusicProvider
@@ -73,14 +73,19 @@ class MusicRepository(
     suspend fun resolveYouTubeLink(url: String): ResolvedYouTubeLink? {
         val resolved = YouTubeLinkResolver.resolve(url) ?: return null
         val matchQuery = "${resolved.title} ${resolved.artist}".trim()
-        val matched = try {
-            search(matchQuery).tracks.firstOrNull()
-                ?: search(resolved.title).tracks.firstOrNull()
+        val matched = findBestAudioMatch(matchQuery, resolved.title)
+        return resolved.copy(matchedAudioTrack = matched)
+    }
+
+    suspend fun findBestAudioMatch(query: String, fallbackTitle: String = query): Track? {
+        return try {
+            val res = search(query).tracks.firstOrNull { it.youtubeVideoId == null }
+                ?: search(fallbackTitle).tracks.firstOrNull { it.youtubeVideoId == null }
                 ?: localIndex.getTrending().firstOrNull()
+            res?.copy(youtubeVideoId = null)
         } catch (_: Exception) {
             localIndex.getTrending().firstOrNull()
         }
-        return resolved.copy(matchedAudioTrack = matched)
     }
 
     // Favorites

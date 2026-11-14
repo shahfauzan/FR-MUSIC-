@@ -335,7 +335,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun playYouTubeMatchInBackground(link: ResolvedYouTubeLink) {
-        val trackToPlay = link.matchedAudioTrack ?: Track(
+        val trackToPlay = (link.matchedAudioTrack ?: Track(
             id = "yt_bg_${link.videoId}",
             title = link.title,
             artist = link.artist,
@@ -344,12 +344,36 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             durationMs = 180000L,
             genre = "Music",
             language = "Hindi"
-        )
+        )).copy(youtubeVideoId = null)
         _activeYouTubeLink.value = null
         playTrack(trackToPlay, listOf(trackToPlay) + _homeState.value.trendingTracks.take(6))
     }
 
     fun playTrack(track: Track, queue: List<Track>? = null) {
+        val ytVideoId = track.youtubeVideoId
+        if (!ytVideoId.isNullOrBlank()) {
+            if (playerUiState.value.playbackState == com.example.data.model.PlaybackState.PLAYING) {
+                playerManager.pause()
+            }
+            val initialLink = ResolvedYouTubeLink(
+                videoId = ytVideoId,
+                originalUrl = "https://www.youtube.com/watch?v=$ytVideoId",
+                title = track.title,
+                artist = track.artist,
+                thumbnailUrl = track.albumArtUrl,
+                matchedAudioTrack = null
+            )
+            _activeYouTubeLink.value = initialLink
+            viewModelScope.launch(Dispatchers.IO) {
+                repository.recordRecentlyPlayed(track)
+                val match = repository.findBestAudioMatch("${track.title} ${track.artist}", track.title)
+                if (_activeYouTubeLink.value?.videoId == ytVideoId) {
+                    _activeYouTubeLink.value = initialLink.copy(matchedAudioTrack = match)
+                }
+            }
+            return
+        }
+
         playerManager.playTrack(track, queue)
         viewModelScope.launch(Dispatchers.IO) {
             repository.recordRecentlyPlayed(track)

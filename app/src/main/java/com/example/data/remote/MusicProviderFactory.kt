@@ -11,7 +11,11 @@ class MusicProviderFactory {
     private val demoProvider = DemoMusicProvider()
     private val audiusProvider = AudiusMusicProvider(demoProvider)
     private val legalProvider = LegalPreviewMusicProvider(demoProvider)
-    private val youtubeProvider = YouTubeMusicProvider(audiusProvider)
+    private val youtubeProvider = YouTubeMusicProvider(
+        audiusProvider = audiusProvider,
+        legalPreviewProvider = legalProvider,
+        demoFallback = demoProvider
+    )
 
     fun getProvider(type: ProviderType): MusicProvider {
         return when (type) {
